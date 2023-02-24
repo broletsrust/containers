@@ -1,12 +1,27 @@
 pub struct Game {
-    containers: Vec<Container>,
-    player: Player,
+    pub containers: Vec<Container>,
+    pub player: Player,
+}
+
+impl Game {
+    pub fn new() -> Self {
+        Self {
+            containers: vec![],
+            player: Player {
+                pos: (0, 0),
+            },
+        }
+    }
+
+    pub fn update(&mut self) {
+
+    }
 }
 
 pub struct Container {
-    pos: (u16, u16),
+    pub pos: (u16, u16),
 }
 
 pub struct Player {
-    pos: (u16, u16),
+    pub pos: (u16, u16),
 }
