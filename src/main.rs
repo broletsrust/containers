@@ -1,8 +1,8 @@
-use std::{io, panic};
+use std::{io, panic, time::Duration};
 
 use crossterm::{terminal::{enable_raw_mode, EnterAlternateScreen, disable_raw_mode, LeaveAlternateScreen}, execute, event::{EnableMouseCapture, DisableMouseCapture, Event, self, KeyCode}};
 use game::Game;
-use tui::{backend::{CrosstermBackend, Backend}, Terminal, Frame, layout::Rect, widgets::Block, style::{Style, Color}};
+use tui::{backend::{CrosstermBackend, Backend}, Terminal, Frame, layout::Rect, widgets::Block, style::Style};
 
 mod game;
 
@@ -34,6 +34,10 @@ fn main() -> Result<(), io::Error> {
         game.update();
         terminal.draw(|f| ui(f, &game))?;
 
+        if !event::poll(Duration::from_millis(20))? {
+            continue;
+        }
+
         if let Event::Key(key) = event::read()? {
             match key.code {
                 KeyCode::Char('q') => {
@@ -59,8 +63,8 @@ fn main() -> Result<(), io::Error> {
 fn ui<B: Backend>(f: &mut Frame<B>, game: &Game) {
     for con in game.containers.iter() {
         let block = Block::default()
-            .style(Style::bg(Default::default(), Color::Red));
-        let rect = Rect::new(con.pos.0, con.pos.1, 7, 3);
+            .style(Style::bg(Default::default(), con.color));
+        let rect = Rect::new(con.pos.0 * 7, con.pos.1 * 3 + con.extra_fall_height, 7, 3);
         f.render_widget(block, rect);
     }
 }
