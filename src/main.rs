@@ -64,7 +64,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, game: &Game) {
     for con in game.containers.iter() {
         let block = Block::default()
             .style(Style::bg(Default::default(), con.color));
-        let rect = Rect::new(con.pos.0 * 7, con.pos.1 * 3 + con.extra_fall_height, 7, 3);
+        let rect = Rect::new(con.pos.0 * 7 + f.size().width / 2 - 5 * 7, con.pos.1 * 3 + con.extra_fall_height + f.size().height - 15 * 3, 7, 3);
         f.render_widget(block, rect);
     }
 }
