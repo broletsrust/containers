@@ -43,6 +43,15 @@ fn main() -> Result<(), io::Error> {
                 KeyCode::Char('q') => {
                     break;
                 }
+                KeyCode::Left => {
+                    game.player.move_left();
+                }
+                KeyCode::Right => {
+                    game.player.move_right();
+                }
+                KeyCode::Up => {
+                    game.player.jump();
+                }
                 _ => {}
             }
         }
@@ -69,11 +78,11 @@ fn ui<B: Backend>(f: &mut Frame<B>, game: &Game) {
     }
 
     let label_1 = Label::default().text(" o ");
-    f.render_widget(label_1, Rect::new(game.player.pos.0 * 7 + f.size().width / 2 - 5 * 7, game.player.pos.1 * 3 + f.size().height - 15 * 3, 7, 1));
+    f.render_widget(label_1, Rect::new(game.player.pos.0 * 7 + game.player.extra.0 + f.size().width / 2 - 5 * 7, game.player.pos.1 * 3 + game.player.extra.1 + f.size().height - 15 * 3, 7, 1));
     let label_2 = Label::default().text("-|-");
-    f.render_widget(label_2, Rect::new(game.player.pos.0 * 7 + f.size().width / 2 - 5 * 7, game.player.pos.1 * 3 + 1 + f.size().height - 15 * 3, 7, 1));
+    f.render_widget(label_2, Rect::new(game.player.pos.0 * 7 + game.player.extra.0 + f.size().width / 2 - 5 * 7, game.player.pos.1 * 3 + 1 + game.player.extra.1 + f.size().height - 15 * 3, 7, 1));
     let label_3 = Label::default().text("/ \\");
-    f.render_widget(label_3, Rect::new(game.player.pos.0 * 7 + f.size().width / 2 - 5 * 7, game.player.pos.1 * 3 + 2 + f.size().height - 15 * 3, 7, 1));
+    f.render_widget(label_3, Rect::new(game.player.pos.0 * 7 + game.player.extra.0 + f.size().width / 2 - 5 * 7, game.player.pos.1 * 3 + 2 + game.player.extra.1 + f.size().height - 15 * 3, 7, 1));
 }
 
 #[derive(Default)]

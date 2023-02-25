@@ -16,6 +16,12 @@ impl Game {
             containers: vec![],
             player: Player {
                 pos: (4, 14),
+                extra: (2, 0),
+                timer: Timer::new(0),
+                movement: Movement::None,
+                jump_timer: Timer::new(100),
+                jumping: false,
+                falling: false,
             },
             timer: Timer::new(3000),
             container_falling: false,
@@ -53,6 +59,32 @@ impl Game {
             self.timer.reset();
             self.container_falling = true;
         }
+
+        let old_pos = self.player.pos;
+        let old_extra = self.player.extra;
+        self.player.update();
+
+        if self.has_container_at(self.player.pos.0, self.player.pos.1) || self.player.extra.0 > 4 && self.has_container_at(self.player.pos.0 + 1, self.player.pos.1) ||
+            self.player.extra.1 > 0 && self.has_container_at(self.player.pos.0, self.player.pos.1 + 1) || self.player.extra.1 > 0 && self.player.extra.0 > 4 && self.has_container_at(self.player.pos.0 + 1, self.player.pos.1 + 1) {
+            self.player.pos = old_pos;
+            self.player.extra = old_extra;
+        }
+
+        if !self.player.jumping && self.player.jump_timer.is_done() && !self.has_container_at(self.player.pos.0, self.player.pos.1 + 1) && self.player.pos.1 < 14 {
+            if self.player.extra.0 <= 4 || self.player.extra.0 > 4 && !self.has_container_at(self.player.pos.0 + 1, self.player.pos.1 + 1) {
+                if self.player.extra.1 >= 2 {
+                    self.player.pos.1 += 1;
+                    self.player.extra.1 = 0;
+                } else {
+                    self.player.extra.1 += 1;
+                }
+                self.player.falling = true;
+            } else {
+                self.player.falling = false;
+            }
+        } else {
+            self.player.falling = false;
+        }
     }
 
     pub fn has_container_at(&self, x: u16, y: u16) -> bool {
@@ -62,6 +94,28 @@ impl Game {
             }
         }
         false
+    }
+}
+
+struct Timer {
+    start: Instant,
+    len: u128,
+}
+
+impl Timer {
+    pub fn new(len: u128) -> Self {
+        Self {
+            start: Instant::now(),
+            len,
+        }
+    }
+
+    pub fn is_done(&self) -> bool {
+        self.start.elapsed().as_millis() >= self.len
+    }
+
+    pub fn reset(&mut self) {
+        self.start = Instant::now();
     }
 }
 
@@ -88,26 +142,93 @@ impl Container {
 
 pub struct Player {
     pub pos: (u16, u16),
+    pub extra: (u16, u16),
+    timer: Timer,
+    movement: Movement,
+    jump_timer: Timer,
+    pub jumping: bool,
+    pub falling: bool,
 }
 
-struct Timer {
-    start: Instant,
-    len: u128,
-}
+impl Player {
+    pub fn update(&mut self) {
+        if self.timer.is_done() {
+            match self.movement {
+                Movement::Left => {
+                    if self.extra.0 == 0 {
+                        if self.pos.0 != 0 {
+                            self.pos.0 -= 1;
+                            self.extra.0 = 6;
+                        }
+                    } else {
+                        self.extra.0 -= 1;
+                    }
+                }
+                Movement::Right => {
+                    if self.extra.0 == 6 && self.pos.0 < 9 {
+                        self.pos.0 += 1;
+                        self.extra.0 = 0;
+                    } else if self.pos.0 == 9 {
+                        if self.extra.0 < 4 {
+                            self.extra.0 += 1;
+                        }
+                    } else {
+                        self.extra.0 += 1;
+                    }
+                }
+                Movement::None => {}
+            }
+            self.movement = Movement::None;
+        }
 
-impl Timer {
-    pub fn new(len: u128) -> Self {
-        Self {
-            start: Instant::now(),
-            len,
+        if self.jumping && self.jump_timer.is_done() {
+            if self.extra.1 == 2 {
+                self.extra.1 += 1;
+                self.jumping = false;
+                self.falling = true;
+            } else {
+                if self.extra.1 == 0 {
+                    self.pos.1 -= 1;
+                    self.extra.1 = 3
+                }
+                if self.extra.1 == 1 {
+                    self.pos.1 -= 1;
+                    self.extra.1 = 4;
+                }
+                self.extra.1 -= 2;
+            }
+
+            self.jump_timer.reset();
         }
     }
 
-    pub fn is_done(&self) -> bool {
-        self.start.elapsed().as_millis() >= self.len
+    pub fn move_left(&mut self) {
+        if self.timer.is_done() {
+            self.movement = Movement::Left;
+            self.timer.len = 10;
+            self.timer.reset();
+        }
     }
 
-    pub fn reset(&mut self) {
-        self.start = Instant::now();
+    pub fn move_right(&mut self) {
+        if self.timer.is_done() {
+            self.movement = Movement::Right;
+            self.timer.len = 10;
+            self.timer.reset();
+        }
     }
+
+    pub fn jump(&mut self) {
+        if !self.jumping && !self.falling && self.jump_timer.is_done() {
+            self.jumping = true;
+            self.jump_timer.reset();
+        }
+    }
+}
+
+#[derive(PartialEq)]
+enum Movement {
+    Left,
+    Right,
+    None,
 }
