@@ -28,6 +28,10 @@ fn main() -> Result<(), io::Error> {
         original_hook(info);
     }));
 
+    if terminal.size()?.width < 70 || terminal.size()?.height < 46 {
+        panic!("terminal not big enough");
+    }
+
     let mut game = Game::new();
 
     loop {
@@ -83,6 +87,11 @@ fn ui<B: Backend>(f: &mut Frame<B>, game: &Game) {
     f.render_widget(label_2, Rect::new(game.player.pos.0 * 7 + game.player.extra.0 + f.size().width / 2 - 5 * 7, game.player.pos.1 * 3 + 1 + game.player.extra.1 + f.size().height - 15 * 3, 7, 1));
     let label_3 = Label::default().text("/ \\");
     f.render_widget(label_3, Rect::new(game.player.pos.0 * 7 + game.player.extra.0 + f.size().width / 2 - 5 * 7, game.player.pos.1 * 3 + 2 + game.player.extra.1 + f.size().height - 15 * 3, 7, 1));
+
+    if game.over {
+        let label = Label::default().text("Game Over!");
+        f.render_widget(label, Rect::new(f.size().width / 2 - 5, f.size().height - 15 * 3 - 1, 10, 1));
+    }
 }
 
 #[derive(Default)]

@@ -8,6 +8,7 @@ pub struct Game {
     pub player: Player,
     timer: Timer,
     container_falling: bool,
+    pub over: bool,
 }
 
 impl Game {
@@ -25,10 +26,16 @@ impl Game {
             },
             timer: Timer::new(3000),
             container_falling: false,
+            over: false,
         }
     }
 
     pub fn update(&mut self) {
+        if self.over {
+            return;
+        }
+
+
         if self.timer.is_done() && self.container_falling {
             if self.containers.last().unwrap().is_on_ground(self) {
                 self.container_falling = false;
@@ -84,6 +91,11 @@ impl Game {
             }
         } else {
             self.player.falling = false;
+        }
+
+        if self.has_container_at(self.player.pos.0, self.player.pos.1) || self.player.extra.0 > 4 && self.has_container_at(self.player.pos.0 + 1, self.player.pos.1) ||
+            self.player.extra.1 > 0 && self.has_container_at(self.player.pos.0, self.player.pos.1 + 1) || self.player.extra.1 > 0 && self.player.extra.0 > 4 && self.has_container_at(self.player.pos.0 + 1, self.player.pos.1 + 1) {
+            self.over = true;
         }
     }
 
