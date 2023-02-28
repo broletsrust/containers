@@ -9,6 +9,7 @@ pub struct Game {
     timer: Timer,
     container_falling: bool,
     pub over: bool,
+    pub points: u8,
 }
 
 impl Game {
@@ -27,17 +28,23 @@ impl Game {
             timer: Timer::new(3000),
             container_falling: false,
             over: false,
+            points: 0,
         }
     }
 
     pub fn update(&mut self) {
+        if self.has_container_at(self.player.pos.0, self.player.pos.1) || self.player.extra.0 > 4 && self.has_container_at(self.player.pos.0 + 1, self.player.pos.1) ||
+            self.player.extra.1 > 0 && self.has_container_at(self.player.pos.0, self.player.pos.1 + 1) || self.player.extra.1 > 0 && self.player.extra.0 > 4 && self.has_container_at(self.player.pos.0 + 1, self.player.pos.1 + 1) {
+            self.over = true;
+        }
+
         if self.over {
             return;
         }
 
-
         if self.timer.is_done() && self.container_falling {
             if self.containers.last().unwrap().is_on_ground(self) {
+                self.points += 1;
                 self.container_falling = false;
                 self.timer.len = 3000;
                 self.timer.reset();
@@ -52,7 +59,7 @@ impl Game {
             }
         }
 
-        if self.timer.is_done() && !self.container_falling && self.containers.len() < 150 {
+        if self.timer.is_done() && !self.container_falling {
             let mut x = rand::thread_rng().gen_range(0..10);
             while self.has_container_at(x, 0) {
                 x = rand::thread_rng().gen_range(0..10);
@@ -91,11 +98,6 @@ impl Game {
             }
         } else {
             self.player.falling = false;
-        }
-
-        if self.has_container_at(self.player.pos.0, self.player.pos.1) || self.player.extra.0 > 4 && self.has_container_at(self.player.pos.0 + 1, self.player.pos.1) ||
-            self.player.extra.1 > 0 && self.has_container_at(self.player.pos.0, self.player.pos.1 + 1) || self.player.extra.1 > 0 && self.player.extra.0 > 4 && self.has_container_at(self.player.pos.0 + 1, self.player.pos.1 + 1) {
-            self.over = true;
         }
     }
 
@@ -158,8 +160,8 @@ pub struct Player {
     timer: Timer,
     movement: Movement,
     jump_timer: Timer,
-    pub jumping: bool,
-    pub falling: bool,
+    jumping: bool,
+    falling: bool,
 }
 
 impl Player {
@@ -200,11 +202,11 @@ impl Player {
                 self.falling = true;
             } else {
                 if self.extra.1 == 0 {
-                    self.pos.1 -= 1;
+                    self.pos.1 = self.pos.1.saturating_sub(1);
                     self.extra.1 = 3
                 }
                 if self.extra.1 == 1 {
-                    self.pos.1 -= 1;
+                    self.pos.1 = self.pos.1.saturating_sub(1);
                     self.extra.1 = 4;
                 }
                 self.extra.1 -= 2;
