@@ -146,6 +146,11 @@ fn ui<B: Backend>(f: &mut Frame<B>, state: &State, game: &Game, menu: &mut Menu)
             let point_label = RightToLeftLabel::default().text(&*points_text);
             f.render_widget(point_label, Rect::new(f.size().width / 2 + 24, f.size().height - 15 * 3 - 1, 11, 1));
 
+            if game.paused {
+                let label = Label::default().text("Paused");
+                f.render_widget(label, Rect::new(f.size().width / 2 - 3, f.size().height - 15 * 3 - 1, 6, 1));
+            }
+
             if game.over {
                 let label = Label::default().text("Game Over!");
                 f.render_widget(label, Rect::new(f.size().width / 2 - 5, f.size().height - 15 * 3 - 1, 10, 1));
