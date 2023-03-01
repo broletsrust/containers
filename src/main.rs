@@ -2,9 +2,11 @@ use std::{io, panic, time::Duration};
 
 use crossterm::{terminal::{enable_raw_mode, EnterAlternateScreen, disable_raw_mode, LeaveAlternateScreen}, execute, event::{EnableMouseCapture, DisableMouseCapture, Event, self, KeyCode}};
 use game::Game;
-use tui::{backend::{CrosstermBackend, Backend}, Terminal, Frame, layout::Rect, widgets::{Block, Widget}, style::Style, buffer::Buffer};
+use stats::Stats;
+use tui::{backend::{CrosstermBackend, Backend}, Terminal, Frame, layout::Rect, widgets::{Block, Widget, ListState, ListItem, List, Borders}, style::{Style, Modifier}, buffer::Buffer};
 
 mod game;
+mod stats;
 
 fn main() -> Result<(), io::Error> {
     // setup terminal
@@ -32,35 +34,81 @@ fn main() -> Result<(), io::Error> {
         panic!("terminal not big enough");
     }
 
-    let state = State::Playing;
-    let mut game = Game::new();
+    let mut state = State::Menu;
+    let mut stats = Stats::get_stats();
+    let mut game = Game::new(stats.upgrade);
+    let mut menu = Menu::new();
+
+    if !stats.upgrade {
+        menu.list.items.push("Upgrade - Cost: 1000 Points");
+    }
+    menu.list.state.select(Some(0));
 
     loop {
         if state == State::Playing {
             game.update();
         }
-
-        terminal.draw(|f| ui(f, &state, &game))?;
+        terminal.draw(|f| ui(f, &state, &game, &mut menu))?;
 
         if !event::poll(Duration::from_millis(20))? {
             continue;
         }
 
         if let Event::Key(key) = event::read()? {
-            match key.code {
-                KeyCode::Char('q') => {
-                    break;
+            match state {
+                State::Playing => {
+                    match key.code {
+                        KeyCode::Char('q') => {
+                            game = Game::new(stats.upgrade);
+                            state = State::Menu;
+                        }
+                        KeyCode::Char('p') => {
+                            game.paused = !game.paused;
+                        }
+                        KeyCode::Left => {
+                            game.player.move_left();
+                        }
+                        KeyCode::Right => {
+                            game.player.move_right();
+                        }
+                        KeyCode::Up => {
+                            game.player.jump();
+                        }
+                        _ => {}
+                    }
                 }
-                KeyCode::Left => {
-                    game.player.move_left();
+                State::Menu => {
+                    match key.code {
+                        KeyCode::Char('q') => {
+                            break;
+                        }
+                        KeyCode::Up => {
+                            menu.list.previous();
+                        }
+                        KeyCode::Down => {
+                            menu.list.next();
+                        }
+                        KeyCode::Enter => {
+                            match menu.list.items[menu.list.state.selected().unwrap_or(0)] {
+                                "Start" => {
+                                    state = State::Playing;
+                                }
+                                "Upgrade - Cost: 1000 Points" => {
+                                    menu.list.items[1] = "Downgrade - Cost: -1000 Points";
+                                    stats.upgrade = true;
+                                    game = Game::new(stats.upgrade);
+                                }
+                                "Downgrade - Cost: -1000 Points" => {
+                                    menu.list.items[1] = "Upgrade - Cost: 1000 Points";
+                                    stats.upgrade = false;
+                                    game = Game::new(stats.upgrade);
+                                }
+                                _ => {}
+                            }
+                        }
+                        _ => {}
+                    }
                 }
-                KeyCode::Right => {
-                    game.player.move_right();
-                }
-                KeyCode::Up => {
-                    game.player.jump();
-                }
-                _ => {}
             }
         }
     }
@@ -77,7 +125,7 @@ fn main() -> Result<(), io::Error> {
     Ok(())
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>, state: &State, game: &Game) {
+fn ui<B: Backend>(f: &mut Frame<B>, state: &State, game: &Game, menu: &mut Menu) {
     match state {
         State::Playing => {
             for con in game.containers.iter() {
@@ -104,7 +152,18 @@ fn ui<B: Backend>(f: &mut Frame<B>, state: &State, game: &Game) {
             }
         }
         State::Menu => {
+            let list = menu.list.clone();
 
+            let list_items: Vec<ListItem> = list.items.iter().map(|i| {
+                ListItem::new(*i)
+            }).collect();
+
+            let items = List::new(list_items)
+                .block(Block::default().borders(Borders::ALL).title("Containers"))
+                .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+                .highlight_symbol("> ");
+
+            f.render_stateful_widget(items, f.size(), &mut menu.list.state);
         }
     }
 }
@@ -113,6 +172,18 @@ fn ui<B: Backend>(f: &mut Frame<B>, state: &State, game: &Game) {
 enum State {
     Menu,
     Playing,
+}
+
+struct Menu<'a> {
+    list: StatefulList<&'a str>
+}
+
+impl<'a> Menu<'a> {
+    fn new() -> Self {
+        Self {
+            list: StatefulList::with_items(vec!["Start"]),
+        }
+    }
 }
 
 #[derive(Default)]
@@ -148,5 +219,48 @@ impl<'a> RightToLeftLabel<'a> {
     fn text(mut self, text: &'a str) -> RightToLeftLabel<'a> {
         self.text = text;
         self
+    }
+}
+
+#[derive(Clone)]
+struct StatefulList<T> {
+    state: ListState,
+    items: Vec<T>,
+}
+
+impl<T> StatefulList<T> {
+    fn with_items(items: Vec<T>) -> StatefulList<T> {
+        StatefulList {
+            state: ListState::default(),
+            items,
+        }
+    }
+
+    fn next(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.items.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    fn previous(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.items.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
     }
 }

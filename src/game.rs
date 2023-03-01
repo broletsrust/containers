@@ -10,10 +10,17 @@ pub struct Game {
     container_falling: bool,
     pub over: bool,
     pub points: u8,
+    pub paused: bool,
 }
 
 impl Game {
-    pub fn new() -> Self {
+    pub fn new(upgrade: bool) -> Self {
+        let jump = if upgrade {
+            4
+        } else {
+            3
+        };
+
         Self {
             containers: vec![],
             player: Player {
@@ -24,15 +31,22 @@ impl Game {
                 jump_timer: Timer::new(100),
                 jumping: false,
                 falling: false,
+                jump,
+                jumped: 0,
             },
             timer: Timer::new(3000),
             container_falling: false,
             over: false,
             points: 0,
+            paused: false,
         }
     }
 
     pub fn update(&mut self) {
+        if self.paused {
+            return;
+        }
+
         if self.has_container_at(self.player.pos.0, self.player.pos.1) || self.player.extra.0 > 4 && self.has_container_at(self.player.pos.0 + 1, self.player.pos.1) ||
             self.player.extra.1 > 0 && self.has_container_at(self.player.pos.0, self.player.pos.1 + 1) || self.player.extra.1 > 0 && self.player.extra.0 > 4 && self.has_container_at(self.player.pos.0 + 1, self.player.pos.1 + 1) {
             self.over = true;
@@ -162,6 +176,8 @@ pub struct Player {
     jump_timer: Timer,
     jumping: bool,
     falling: bool,
+    jump: u8,
+    jumped: u8,
 }
 
 impl Player {
@@ -196,10 +212,25 @@ impl Player {
         }
 
         if self.jumping && self.jump_timer.is_done() {
-            if self.extra.1 == 2 {
-                self.extra.1 += 1;
-                self.jumping = false;
-                self.falling = true;
+            self.jumped += 1;
+
+            if self.jumped >= self.jump {
+                if self.extra.1 == 2 {
+                    self.extra.1 += 1;
+                    self.jumping = false;
+                    self.falling = true;
+                    self.jumped = 0;
+                } else {
+                    if self.extra.1 == 0 {
+                        self.pos.1 = self.pos.1.saturating_sub(1);
+                        self.extra.1 = 3
+                    }
+                    if self.extra.1 == 1 {
+                        self.pos.1 = self.pos.1.saturating_sub(1);
+                        self.extra.1 = 4;
+                    }
+                    self.extra.1 -= 2;
+                }
             } else {
                 if self.extra.1 == 0 {
                     self.pos.1 = self.pos.1.saturating_sub(1);
