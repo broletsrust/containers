@@ -9,12 +9,12 @@ pub struct Game {
     timer: Timer,
     container_falling: bool,
     pub over: bool,
-    pub points: u8,
+    pub points: u32,
     pub paused: bool,
 }
 
 impl Game {
-    pub fn new(upgrade: bool) -> Self {
+    pub fn new(upgrade: bool, points: u32) -> Self {
         let jump = if upgrade {
             4
         } else {
@@ -37,7 +37,7 @@ impl Game {
             timer: Timer::new(3000),
             container_falling: false,
             over: false,
-            points: 0,
+            points,
             paused: false,
         }
     }

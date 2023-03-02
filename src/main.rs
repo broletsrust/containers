@@ -36,11 +36,11 @@ fn main() -> Result<(), io::Error> {
 
     let mut state = State::Menu;
     let mut stats = Stats::get_stats();
-    let mut game = Game::new(stats.upgrade);
+    let mut game = Game::new(stats.upgrade, stats.points);
     let mut menu = Menu::new();
 
     if !stats.upgrade {
-        menu.list.items.push("Upgrade - Cost: 1000 Points");
+        menu.list.items.push("Upgrade - Cost: 3000 Points");
     }
     menu.list.state.select(Some(0));
 
@@ -48,7 +48,7 @@ fn main() -> Result<(), io::Error> {
         if state == State::Playing {
             game.update();
         }
-        terminal.draw(|f| ui(f, &state, &game, &mut menu))?;
+        terminal.draw(|f| ui(f, &state, &game, &mut menu, &stats))?;
 
         if !event::poll(Duration::from_millis(20))? {
             continue;
@@ -59,7 +59,8 @@ fn main() -> Result<(), io::Error> {
                 State::Playing => {
                     match key.code {
                         KeyCode::Char('q') => {
-                            game = Game::new(stats.upgrade);
+                            stats.points = game.points;
+                            game = Game::new(stats.upgrade, stats.points);
                             state = State::Menu;
                         }
                         KeyCode::Char('p') => {
@@ -93,15 +94,19 @@ fn main() -> Result<(), io::Error> {
                                 "Start" => {
                                     state = State::Playing;
                                 }
-                                "Upgrade - Cost: 1000 Points" => {
-                                    menu.list.items[1] = "Downgrade - Cost: -1000 Points";
-                                    stats.upgrade = true;
-                                    game = Game::new(stats.upgrade);
+                                "Upgrade - Cost: 3000 Points" => {
+                                    if stats.points >= 3000 {
+                                        menu.list.items[1] = "Downgrade - Cost: -3000 Points";
+                                        stats.upgrade = true;
+                                        stats.points -= 3000;
+                                        game = Game::new(stats.upgrade, stats.points);
+                                    }
                                 }
-                                "Downgrade - Cost: -1000 Points" => {
-                                    menu.list.items[1] = "Upgrade - Cost: 1000 Points";
+                                "Downgrade - Cost: -3000 Points" => {
+                                    menu.list.items[1] = "Upgrade - Cost: 3000 Points";
                                     stats.upgrade = false;
-                                    game = Game::new(stats.upgrade);
+                                    stats.points += 3000;
+                                    game = Game::new(stats.upgrade, stats.points);
                                 }
                                 _ => {}
                             }
@@ -125,7 +130,7 @@ fn main() -> Result<(), io::Error> {
     Ok(())
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>, state: &State, game: &Game, menu: &mut Menu) {
+fn ui<B: Backend>(f: &mut Frame<B>, state: &State, game: &Game, menu: &mut Menu, stats: &Stats) {
     match state {
         State::Playing => {
             for con in game.containers.iter() {
@@ -164,7 +169,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, state: &State, game: &Game, menu: &mut Menu)
             }).collect();
 
             let items = List::new(list_items)
-                .block(Block::default().borders(Borders::ALL).title("Containers"))
+                .block(Block::default().borders(Borders::ALL).title(format!("Containers - {} Points", stats.points)))
                 .highlight_style(Style::default().add_modifier(Modifier::BOLD))
                 .highlight_symbol("> ");
 
