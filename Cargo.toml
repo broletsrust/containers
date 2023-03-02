@@ -7,5 +7,8 @@ edition = "2021"
 
 [dependencies]
 crossterm = "0.26.0"
+dirs = "4.0.0"
 rand = "0.8.5"
+ron = "0.8.0"
+serde = "1.0.152"
 tui = "0.19.0"

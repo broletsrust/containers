@@ -118,6 +118,8 @@ fn main() -> Result<(), io::Error> {
         }
     }
 
+    stats.save();
+
     // restore terminal
     disable_raw_mode()?;
     execute!(
